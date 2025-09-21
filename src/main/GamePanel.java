@@ -17,6 +17,7 @@ public class GamePanel extends JPanel implements Runnable {
     public static ArrayList<Piece> pieces = new ArrayList<>();
     public static ArrayList<Piece> simPieces = new ArrayList<>();
     Piece activePiece;
+    public static Piece castlingPiece;
 
 
     // COLOR
@@ -53,11 +54,11 @@ public class GamePanel extends JPanel implements Runnable {
         pieces.add(new Pawn(WHITE, 7, 6));
         pieces.add(new Rook(WHITE, 0, 7));
         pieces.add(new Rook(WHITE, 7, 7));
-        pieces.add(new Knight(WHITE, 1, 7));
-        pieces.add(new Knight(WHITE, 6, 7));
-        pieces.add(new Bishop(WHITE, 2, 7));
-        pieces.add(new Bishop(WHITE, 5, 7));
-        pieces.add(new Queen(WHITE, 3, 7));
+        //pieces.add(new Knight(WHITE, 1, 7));
+        //pieces.add(new Knight(WHITE, 6, 7));
+        //pieces.add(new Bishop(WHITE, 2, 7));
+        //pieces.add(new Bishop(WHITE, 5, 7));
+        //pieces.add(new Queen(WHITE, 3, 7));
         pieces.add(new King(WHITE, 4, 7));
 
         // Black
@@ -130,6 +131,9 @@ public class GamePanel extends JPanel implements Runnable {
                     // Update the piece list in case a piece has been captured and removed during the simulation
                     copyPieces(simPieces, pieces);
                     activePiece.updatePosition();
+                    if(castlingPiece != null) {
+                        castlingPiece.updatePosition();
+                    }
                     changePlayer();
                 }
                 else {
@@ -148,6 +152,12 @@ public class GamePanel extends JPanel implements Runnable {
         // Repeat the list in every loop
         copyPieces(pieces, simPieces);
 
+        if (castlingPiece != null) {
+            castlingPiece.col = castlingPiece.preCol;
+            castlingPiece.x = castlingPiece.getX(castlingPiece.col);
+            castlingPiece = null;
+        }
+
         // If a piece is being held, update its positioned
         activePiece.x = mouse.x - Board.HALF_SQUARE_SIZE;
         activePiece.y = mouse.y - Board.HALF_SQUARE_SIZE;
@@ -162,10 +172,20 @@ public class GamePanel extends JPanel implements Runnable {
             if (activePiece.hittingPiece != null) {
                 simPieces.remove(activePiece.hittingPiece.getIndex());
             }
+            checkCastling();
             validSquare = true;
         }
     }
-
+    private void checkCastling(){
+        if(castlingPiece != null) {
+            if(castlingPiece.col == 0) {
+                castlingPiece.col += 3;
+            } else if (castlingPiece.col == 7) {
+                castlingPiece.col -= 2;
+            }
+            castlingPiece.x = castlingPiece.getX(castlingPiece.col);
+        }
+    }
     private void changePlayer() {
         if(currentColor == WHITE) {
             currentColor = BLACK;
