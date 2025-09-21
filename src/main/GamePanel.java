@@ -125,13 +125,15 @@ public class GamePanel extends JPanel implements Runnable {
         if (!mouse.pressed) {
             if (activePiece != null) {
                 if (validSquare) {
-                    // Move conmfirmed
+                    // Move confirmed
 
                     // Update the piece list in case a piece has been captured and removed during the simulation
                     copyPieces(simPieces, pieces);
                     activePiece.updatePosition();
                 }
                 else {
+                    // The move is not valid, so reset
+                    copyPieces(simPieces, pieces);
                     activePiece.resetPosition();
                     activePiece = null;
                 }
@@ -143,14 +145,15 @@ public class GamePanel extends JPanel implements Runnable {
         validSquare = false;
 
         // Repeat the list in every loop
-        copyPieces(simPieces, pieces);
+        copyPieces(pieces, simPieces);
 
-        // If a piece is being held, update its positiond
+        // If a piece is being held, update its positioned
         activePiece.x = mouse.x - Board.HALF_SQUARE_SIZE;
         activePiece.y = mouse.y - Board.HALF_SQUARE_SIZE;
         activePiece.col = activePiece.getCol(activePiece.x);
         activePiece.row = activePiece.getRow(activePiece.y);
 
+        // Check if piece is hovering above a reachable square
         if (activePiece.canMove(activePiece.col, activePiece.row)) {
             canMove = true;
 
@@ -158,7 +161,6 @@ public class GamePanel extends JPanel implements Runnable {
             if (activePiece.hittingPiece != null) {
                 simPieces.remove(activePiece.hittingPiece.getIndex());
             }
-
             validSquare = true;
         }
     }
