@@ -16,6 +16,7 @@ public class GamePanel extends JPanel implements Runnable {
     // PIECES
     public static ArrayList<Piece> pieces = new ArrayList<>();
     public static ArrayList<Piece> simPieces = new ArrayList<>();
+    ArrayList<Piece> promotionPieces = new ArrayList<>();
     Piece activePiece;
     public static Piece castlingPiece;
 
@@ -28,6 +29,7 @@ public class GamePanel extends JPanel implements Runnable {
     // GAME-STATE BOOLEANS
     boolean canMove;
     boolean validSquare;
+    boolean promotion;
 
     public GamePanel() {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
@@ -35,6 +37,7 @@ public class GamePanel extends JPanel implements Runnable {
         addMouseMotionListener(mouse);
         addMouseListener(mouse);
         setPieces();
+        //testPromotion();
         copyPieces(pieces, simPieces);
 
     }
@@ -54,11 +57,11 @@ public class GamePanel extends JPanel implements Runnable {
         pieces.add(new Pawn(WHITE, 7, 6));
         pieces.add(new Rook(WHITE, 0, 7));
         pieces.add(new Rook(WHITE, 7, 7));
-        //pieces.add(new Knight(WHITE, 1, 7));
-        //pieces.add(new Knight(WHITE, 6, 7));
-        //pieces.add(new Bishop(WHITE, 2, 7));
-        //pieces.add(new Bishop(WHITE, 5, 7));
-        //pieces.add(new Queen(WHITE, 3, 7));
+        pieces.add(new Knight(WHITE, 1, 7));
+        pieces.add(new Knight(WHITE, 6, 7));
+        pieces.add(new Bishop(WHITE, 2, 7));
+        pieces.add(new Bishop(WHITE, 5, 7));
+        pieces.add(new Queen(WHITE, 3, 7));
         pieces.add(new King(WHITE, 4, 7));
 
         // Black
@@ -78,6 +81,10 @@ public class GamePanel extends JPanel implements Runnable {
         pieces.add(new Bishop(BLACK, 5, 0));
         pieces.add(new Queen(BLACK, 3, 0));
         pieces.add(new King(BLACK, 4, 0));
+    }
+    public void testPromotion(){
+        pieces.add(new Pawn(WHITE, 0, 3));
+        pieces.add(new Pawn(BLACK, 5,4));
     }
     private void copyPieces(ArrayList<Piece> source, ArrayList<Piece> target) {
         target.clear();
@@ -104,43 +111,52 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
     private void update() {
-
-        /// MOUSE BUTTON PRESSED
-        if (mouse.pressed) {
-            if (activePiece == null) {
-                /// If there is no active piece, check if you can pick up a piece
-                for (Piece piece : simPieces) {
-                    ///  If the mouse is on the same color, pick it up as the active piece
-                    if (piece.color == currentColor && piece.col == mouse.x / Board.SQUARE_SIZE && piece.row == mouse.y / Board.SQUARE_SIZE) {
-                        activePiece = piece;
-                        break;
-                    }
-                }
-            }
-            else {
-                // If the player is holding a piece, simulate the move
-                simulate();
-            }
+        if (promotion) {
+            promoting();
         }
-        /// MOUSE BUTTON RELEASED
-        if (!mouse.pressed) {
-            if (activePiece != null) {
-                if (validSquare) {
-                    // Move confirmed
-
-                    // Update the piece list in case a piece has been captured and removed during the simulation
-                    copyPieces(simPieces, pieces);
-                    activePiece.updatePosition();
-                    if(castlingPiece != null) {
-                        castlingPiece.updatePosition();
+        else {
+            /// MOUSE BUTTON PRESSED
+            if (mouse.pressed) {
+                if (activePiece == null) {
+                    /// If there is no active piece, check if you can pick up a piece
+                    for (Piece piece : simPieces) {
+                        ///  If the mouse is on the same color, pick it up as the active piece
+                        if (piece.color == currentColor && piece.col == mouse.x / Board.SQUARE_SIZE && piece.row == mouse.y / Board.SQUARE_SIZE) {
+                            activePiece = piece;
+                            break;
+                        }
                     }
-                    changePlayer();
                 }
                 else {
-                    // The move is not valid, so reset
-                    copyPieces(simPieces, pieces);
-                    activePiece.resetPosition();
-                    activePiece = null;
+                    // If the player is holding a piece, simulate the move
+                    simulate();
+                }
+            }
+            /// MOUSE BUTTON RELEASED
+            if (!mouse.pressed) {
+                if (activePiece != null) {
+                    if (validSquare) {
+                        // Move confirmed
+
+                        // Update the piece list in case a piece has been captured and removed during the simulation
+                        copyPieces(simPieces, pieces);
+                        activePiece.updatePosition();
+                        if(castlingPiece != null) {
+                            castlingPiece.updatePosition();
+                        }
+                        if(canPromote()) {
+                            promotion = true;
+                        }
+                        else {
+                            changePlayer();
+                        }
+                    }
+                    else {
+                        // The move is not valid, so reset
+                        copyPieces(simPieces, pieces);
+                        activePiece.resetPosition();
+                        activePiece = null;
+                    }
                 }
             }
         }
@@ -189,11 +205,56 @@ public class GamePanel extends JPanel implements Runnable {
     private void changePlayer() {
         if(currentColor == WHITE) {
             currentColor = BLACK;
+            // Change black's two-stepped status
+            for(Piece piece : pieces) {
+                if(piece.color == BLACK) {
+                    piece.twoStepped = false;
+                }
+            }
         }
         else {
             currentColor = WHITE;
+            for(Piece piece : pieces) {
+                if(piece.color == WHITE) {
+                    piece.twoStepped = false;
+                }
+            }
         }
         activePiece = null;
+    }
+    private boolean canPromote() {
+        if(activePiece.type == Type.PAWN) {
+            if (currentColor == WHITE && activePiece.row == 0 || currentColor == BLACK && activePiece.row == 7) {
+                promotionPieces.clear();
+                promotionPieces.add(new Rook(currentColor, 9, 2));
+                promotionPieces.add(new Knight(currentColor, 9, 3));
+                promotionPieces.add(new Bishop(currentColor, 9, 4));
+                promotionPieces.add(new Queen(currentColor, 9, 5));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void promoting() {
+        if(mouse.pressed) {
+            for(Piece piece : promotionPieces) {
+                if(piece.col == mouse.x/Board.SQUARE_SIZE && piece.row == mouse.y/Board.SQUARE_SIZE) {
+                    switch (piece.type) {
+                        case ROOK: simPieces.add(new Rook(currentColor, activePiece.col, activePiece.row)); break;
+                        case KNIGHT: simPieces.add(new Knight(currentColor, activePiece.col, activePiece.row)); break;
+                        case BISHOP: simPieces.add(new Bishop(currentColor, activePiece.col, activePiece.row)); break;
+                        case QUEEN: simPieces.add(new Queen(currentColor, activePiece.col, activePiece.row)); break;
+                        default: break;
+                    }
+                    simPieces.remove(activePiece.getIndex());
+                    copyPieces(simPieces, pieces);
+                    activePiece = null;
+                    promotion = false;
+                    changePlayer();  
+                }
+            }
+        }
     }
 
     public void paintComponent(Graphics g) {
@@ -224,11 +285,20 @@ public class GamePanel extends JPanel implements Runnable {
         g2.setFont(new Font("Book Antiqua", Font.PLAIN, 30));
         g2.setColor(Color.white);
 
-        if(currentColor == WHITE) {
-            g2.drawString("White's turn", 700, 550);
+        if(promotion) {
+            g2.drawString("Promote to: ", 700, 150);
+            for(Piece piece : promotionPieces) {
+                g2.drawImage(piece.image, piece.getX(piece.col),  piece.getY(piece.row), Board.SQUARE_SIZE,
+                        Board.SQUARE_SIZE, null);
+            }
         }
         else {
-            g2.drawString("Black's turn", 700, 150);
+            if(currentColor == WHITE) {
+                g2.drawString("White's turn", 700, 550);
+            }
+            else {
+                g2.drawString("Black's turn", 700, 150);
+            }
         }
     }
 }
