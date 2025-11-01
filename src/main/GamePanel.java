@@ -31,6 +31,7 @@ public class GamePanel extends JPanel implements Runnable {
     boolean validSquare;
     boolean promotion;
     boolean gameOver;
+    boolean stalemate;
 
     public GamePanel() {
         setPreferredSize(new Dimension(WIDTH, HEIGHT));
@@ -126,7 +127,7 @@ public class GamePanel extends JPanel implements Runnable {
         if (promotion) {
             promoting();
         }
-        else if(gameOver = false) {
+        else if(!gameOver && !stalemate) {
             /// MOUSE BUTTON PRESSED
             if (mouse.pressed) {
                 if (activePiece == null) {
@@ -159,6 +160,9 @@ public class GamePanel extends JPanel implements Runnable {
 
                         if(isKingInCheck() && isCheckmate()) {
                             gameOver = true;
+                        }
+                        else if(isStalemate()) {
+                            stalemate = true;
                         }
                         else {
                             if(canPromote()) {
@@ -418,6 +422,21 @@ public class GamePanel extends JPanel implements Runnable {
         return isValidMove;
     }
 
+    private boolean isStalemate() {
+        int count = 0;
+        for (Piece piece : simPieces) {
+            if (piece.color != currentColor) {
+                count++;
+            }
+        }
+        if(count == 1) {
+            if (kingCanMove(getKing(true)) == false) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void checkCastling(){
         if(castlingPiece != null) {
             if(castlingPiece.col == 0) {
@@ -555,6 +574,11 @@ public class GamePanel extends JPanel implements Runnable {
             g2.setFont(new Font("Arial", Font.PLAIN, 30));
             g2.setColor(Color.GREEN);
             g2.drawString(s, 200, 420);
+        }
+        if (stalemate) {
+            g2.setFont(new Font("Arial", Font.PLAIN, 30));
+            g2.setColor(Color.lightGray);
+            g2.drawString("STALEMATE", 200, 420);
         }
     }
 }
